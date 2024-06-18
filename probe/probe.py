@@ -1,14 +1,11 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 import os
 import json
-from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-import sys
 import random
-from torch.utils.data import DataLoader, TensorDataset
+import argparse
 
 class SingleLayerClassifier(nn.Module):
     """
@@ -42,7 +39,7 @@ def test(model, data):
 
     Args:
         model: SoftMax Linear Classifier to be tested.
-        data: A DataLoader containing the test dataset.
+        data: Data containing the test dataset.
     Returns:
         A tuple containing the average loss, overall accuracy, per-class accuracies,
         average absolute difference across all predictions, and average absolute difference per class.
@@ -98,7 +95,7 @@ def train(model, data, epochs, lr):
 
     Args:
         model: Classifier to be trained.
-        data: A DataLoader containing the training dataset.
+        data: Data containing the training dataset.
         epochs (int): The number of times to iterate over the entire dataset.
         lr (float): Learning rate for the optimizer.
 
@@ -227,73 +224,80 @@ def read_data(path, max_files=None):
 
     return data_dict
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python script.py <data_path>")
-        sys.exit(1)
 
-    data_path = sys.argv[1]
-
-    print(f'Processing {data_path}', flush=True)
-
-    data = read_data(data_path, max_files=1)
-
-    indices = sorted(list(data.keys())) 
-    print('Indices are:', indices)
-
-    results_single = []
+def process_data(data, indices):
     X = []
     Y = []
-
     for index in indices:
         X += data[index]
-        print(f"The length of {index} is {len(data[index])}")
         Y += ([indices.index(index)] * len(data[index]))
 
-        print(f"The length of whole data is: {len(X)}", flush=True)
-        shuffle_indices = list(range(len(X)))
-        random.shuffle(shuffle_indices)
-        X = [X[i] for i in shuffle_indices]
-        Y = [Y[i] for i in shuffle_indices]
-        validate_tensors(X)
+    shuffle_indices = list(range(len(X)))
+    random.shuffle(shuffle_indices)
+    X = [X[i] for i in shuffle_indices]
+    Y = [Y[i] for i in shuffle_indices]
+    validate_tensors(X)
 
+    X = torch.stack(X, dim=0)
+    Y = torch.tensor(Y)
+    return X, Y
 
-        X = torch.stack(X, dim=0)
-        Y = torch.tensor(Y)
+def main(data_path, output_folder):
+    print(f'Processing {data_path}', flush=True)
+    data = read_data(data_path, max_files=1)
 
-        length = len(X)
-        print(f"THere are {length} data all togethter", flush=True)
-        split_point = int(length * 0.8)
-        X_train = X[:split_point]
-        X_test = X[split_point:]
-        Y_train = Y[:split_point]
-        Y_test = Y[split_point:]
+    indices = sorted(list(data.keys()))
+    print('Indices are:', indices)
 
-        emb_dim = (X.shape[2])
-        num_classes = len(indices)
+    X, Y = process_data(data, indices)
+    length = len(X)
+    print(f"There are {length} data all together", flush=True)
 
-        for i in range(X_train.shape[1]):
-            print(f"Training on layer {i+1}", flush=True)
-            Xi_train = X_train[:, i, :]
-            Xi_test = X_test[:, i, :]
-            model = SingleLayerClassifier(emb_dim, num_classes)
+    split_point = int(length * 0.8)
+    X_train = X[:split_point]
+    X_test = X[split_point:]
+    Y_train = Y[:split_point]
+    Y_test = Y[split_point:]
 
-            loss_train, accuracy_train, class_accuracies_train, dist_train, class_dist_train = classify(model, indices, Xi_train, Y_train, train_mode=True)
-            loss_test, accuracy_test, class_accuracies_test, dist_test, class_dist_test = classify(model, indices, Xi_test, Y_test, train_mode=False)
-            results_single.append({
-                'layer_num': i,
-                'train_loss': loss_train,
-                'train_accuracy': accuracy_train,
-                'train_class_accuracies': class_accuracies_train,
-                'train_distance':dist_train,
-                'train_class_distance': class_dist_train, 
-                'test_loss': loss_test,
-                'test_accuracy': accuracy_test,
-                'test_class_accuracies': class_accuracies_test,
-                'test_distance': dist_test,
-                'test_class_distance': class_dist_test,  
-            })
+    emb_dim = X.shape[2]
+    num_classes = len(indices)
+    results_single = []
 
+    for i in tqdm(range(X_train.shape[1])):
+        print(f"Training on layer {i+1}", flush=True)
+        Xi_train = X_train[:, i, :]
+        Xi_test = X_test[:, i, :]
+        model = SingleLayerClassifier(emb_dim, num_classes)
 
-        with open(f'single_probing_results_{len(indices)}_{indices[-1]+1}-mistral-it-5.json', 'w') as file:
-            json.dump(results_single, file, indent=4)
+        train_results = classify(model, indices, Xi_train, Y_train, train_mode=True)
+        test_results = classify(model, indices, Xi_test, Y_test, train_mode=False)
+
+        results_single.append({
+            'layer_num': i,
+            'train_loss': train_results[0],
+            'train_accuracy': train_results[1],
+            'train_class_accuracies': train_results[2],
+            'train_distance': train_results[3],
+            'train_class_distance': train_results[4],
+            'test_loss': test_results[0],
+            'test_accuracy': test_results[1],
+            'test_class_accuracies': test_results[2],
+            'test_distance': test_results[3],
+            'test_class_distance': test_results[4]
+        })
+
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    
+    results_file_path = os.path.join(output_folder, f'probing-results.json')
+    with open(results_file_path, 'w') as file:
+        json.dump(results_single, file, indent=4)
+    print(f'Results saved to {results_file_path}')
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Process and classify data.')
+    parser.add_argument('data_path', type=str, help='Path to the data file')
+    parser.add_argument('output_folder', type=str, help='Output folder for results')
+    args = parser.parse_args()
+
+    main(args.data_path, args.output_folder)
