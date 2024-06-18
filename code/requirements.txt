@@ -1,0 +1,7 @@
+transformers
+accelerate
+torch
+tqdm
+numpy
+regex
+typing
