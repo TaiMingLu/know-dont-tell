@@ -159,16 +159,29 @@ def train(model, data, epochs, lr):
         
     return total_loss / len(data), accuracy, class_accuracies, total_abs_diff / total, class_avg_abs_diff
 
-def classify(model, window, X, Y, temperature=0.1, softmax=False, train_mode=True):
+
+def classify(model, num_classes, X, Y, train_mode=True):
+    """
+    Classify or train the model based on the given dataset and mode.
+
+    Args:
+        model: The neural network model to be trained or tested.
+        num_classes: The number of different IDs.
+        X: Input features tensor.
+        Y: Labels tensor.
+        train_mode (bool): Flag to determine whether to train the model or classify using the existing model.
+
+    Returns:
+        A tuple containing the loss, overall accuracy, per-class accuracies, total distance, and per-class distance.
+    """
     X = normalize_data(X)
     emb_dim = (X.shape[1])
-    num_classes = len(window)
 
     print(f"X shape: {X.shape}, Y shape: {Y.shape}, emd_dim: {emb_dim}, num_classes: {num_classes}, now train is set to be {train_mode}")
 
     if train_mode:
         data = [(X, Y)]
-        loss, accuracy, class_accuracies, dist, class_dist = train(model, data, epochs=150, lr=(0.001 if softmax else 0.005))
+        loss, accuracy, class_accuracies, dist, class_dist = train(model, data, epochs=150, lr=0.005)
     else:
         model.eval()
         with torch.no_grad():
