@@ -13,6 +13,7 @@ import regex
 parser = argparse.ArgumentParser(description="Process and generate answers using a text-generation model.")
 parser.add_argument('--model', type=str, default="meta-llama/Meta-Llama-3-8B-Instruct", help="Model identifier for the transformer model.")
 parser.add_argument('--data_path', type=str, default='/path/to/your/data.jsonl.gz', help="Path to the data file.")
+parser.add_argument('--num_data', type=int, default=1000, help="Number of data to test.")
 args = parser.parse_args()
 
 def normalize_answer(s: str) -> str:
@@ -58,7 +59,7 @@ for n in [10, 20, 30, 40, 50]:
     results[n] = {}
     for index in index_map[n]:
         results[n][index] = {'correct': 0, 'total': 0}
-    num_data = 100
+    num_data = args.num_data
     docs = get_multi_doc_data(args.data_path, num_data, n, 1)
     for i in tqdm(range(num_data)):
         doc = docs[i]

@@ -11,6 +11,7 @@ import regex
 
 parser = argparse.ArgumentParser(description="Process and generate answers using a text-generation model.")
 parser.add_argument('--model', type=str, default="meta-llama/Meta-Llama-3-8B-Instruct", help="Model identifier for the transformer model.")
+parser.add_argument('--num_data', type=int, default=1000, help="Number of data to test.")
 args = parser.parse_args()
 
 def normalize_answer(s: str) -> str:
@@ -55,16 +56,20 @@ def get_prompt(kv_pairs, index):
     return {'prompt': prompt, 'index': index, 'value': kv_paris[1][index]}
 
 index_map = {
-    100: [99]
+    20: [0, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19],
+    40: [0, 3, 7, 11, 15, 19, 23, 27, 31, 35, 39],
+    60: [0, 5, 11, 17, 23, 29, 35, 41, 47, 53, 59],
+    80: [0, 7, 15, 23, 31, 39, 47, 55, 63, 71, 79],
+    100: [0, 9, 19, 29, 39, 49, 59, 69, 79, 89, 99],
 }
 
 results = {}
 
-for n in [100]:
+for n in [20, 40, 60, 80, 100]:
     results[n] = {}
     for index in index_map[n]:
         results[n][index] = {'correct': 0, 'total': 0}
-    for _ in range(100):
+    for _ in range(args.num_data):
         kv_paris = get_kv_paris(n)
         for index in index_map[n]:
             prompt = get_prompt(kv_paris, index)
