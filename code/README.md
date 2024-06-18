@@ -1,3 +1,11 @@
+### Environment Setup
+```
+conda create --n know_dont_tell python=3.9
+cd code
+conda activate know_dont_tell
+pip install -r requirements.txt
+```
+
 ### For Multi-Documents Question Answering
 Downloaded the data from [Liu et al.](https://arxiv.org/abs/2307.03172)
 
