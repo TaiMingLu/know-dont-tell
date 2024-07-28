@@ -7,16 +7,20 @@ from tqdm import tqdm
 import random
 import argparse
 
+
 class SingleLayerClassifier(nn.Module):
     """
     A linear classifier with a classification (Input: Layer last token embedding, Output: KV-Pair/Document ID).
     """
+
     def __init__(self, input_size, num_classes):
         super(SingleLayerClassifier, self).__init__()
-        self.linear = nn.Linear(input_size, num_classes)  # Linear layer to transform inputs to outputs
+        # Linear layer to transform inputs to outputs
+        self.linear = nn.Linear(input_size, num_classes)
 
     def forward(self, x):
         return self.linear(x)
+
 
 def normalize_data(X):
     """
@@ -29,9 +33,11 @@ def normalize_data(X):
         Tensor: The normalized data tensor.
     """
     mean = X.mean(dim=0, keepdim=True)  # Compute the mean of each feature
-    std = X.std(dim=0, keepdim=True) + 1e-8  # Compute the standard deviation of each feature, prevent division by zero
+    # Compute the standard deviation of each feature, prevent division by zero
+    std = X.std(dim=0, keepdim=True) + 1e-8
     normalized_X = (X - mean) / std  # Normalize features
     return normalized_X
+
 
 def test(model, data):
     """
@@ -54,7 +60,7 @@ def test(model, data):
     class_total = dict()
     class_abs_diff = dict()
     class_counts = dict()
-    
+
     with torch.no_grad():
         for X, Y in data:
             outputs = model(X)
@@ -72,7 +78,8 @@ def test(model, data):
                     class_counts[label.item()] = 0
                 class_total[label.item()] += 1
                 class_counts[label.item()] += 1
-                class_abs_diff[label.item()] += (prediction - label).abs().item()
+                class_abs_diff[label.item()] += (prediction -
+                                                 label).abs().item()
                 if label == prediction:
                     class_correct[label.item()] += 1
 
@@ -81,13 +88,15 @@ def test(model, data):
 
     accuracy = 100 * correct / total if total > 0 else 0
     class_accuracies = []
-    class_avg_abs_diff = {c: class_abs_diff[c] / class_counts[c] if class_counts[c] > 0 else 0 for c in sorted(class_total.keys())}
+    class_avg_abs_diff = {c: class_abs_diff[c] / class_counts[c]
+                          if class_counts[c] > 0 else 0 for c in sorted(class_total.keys())}
     for c in sorted(class_total.keys()):
-        class_acc = 100 * class_correct[c] / class_total[c] if class_total[c] > 0 else 0
+        class_acc = 100 * class_correct[c] / \
+            class_total[c] if class_total[c] > 0 else 0
         class_accuracies.append(class_acc)
 
-        
     return total_loss / len(data), accuracy, class_accuracies, total_abs_diff / total, class_avg_abs_diff
+
 
 def train(model, data, epochs, lr):
     """
@@ -103,13 +112,12 @@ def train(model, data, epochs, lr):
         A tuple containing the average loss, overall accuracy, per-class accuracies,
         average absolute difference across all predictions, and average absolute difference per class.
     """
-    
+
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-3)
 
     model.train()
     class_accuracies = []
-
 
     for epoch in range(epochs):
         total_abs_diff = 0
@@ -140,20 +148,21 @@ def train(model, data, epochs, lr):
                     class_counts[label.item()] = 0
                 class_total[label.item()] += 1
                 class_counts[label.item()] += 1
-                class_abs_diff[label.item()] += (prediction - label).abs().item()
+                class_abs_diff[label.item()] += (prediction -
+                                                 label).abs().item()
                 if label == prediction:
                     class_correct[label.item()] += 1
-
 
             total_loss += loss.item()
             total_abs_diff += (predicted - Y).abs().sum().item()
 
         accuracy = 100 * correct / total if total > 0 else 0
 
-        class_avg_abs_diff = {c: class_abs_diff[c] / class_counts[c] if class_counts[c] > 0 else 0 for c in sorted(class_total.keys())}
-        class_accuracies = [100 * class_correct[c] / class_total[c] if class_total[c] > 0 else 0 for c in sorted(class_total.keys())]
+        class_avg_abs_diff = {c: class_abs_diff[c] / class_counts[c]
+                              if class_counts[c] > 0 else 0 for c in sorted(class_total.keys())}
+        class_accuracies = [100 * class_correct[c] / class_total[c]
+                            if class_total[c] > 0 else 0 for c in sorted(class_total.keys())]
 
-        
     return total_loss / len(data), accuracy, class_accuracies, total_abs_diff / total, class_avg_abs_diff
 
 
@@ -178,30 +187,37 @@ def classify(model, num_classes, X, Y, train_mode=True):
 
     if train_mode:
         data = [(X, Y)]
-        loss, accuracy, class_accuracies, dist, class_dist = train(model, data, epochs=150, lr=0.005)
+        loss, accuracy, class_accuracies, dist, class_dist = train(
+            model, data, epochs=150, lr=0.005)
     else:
         model.eval()
         with torch.no_grad():
-            loss, accuracy, class_accuracies, dist, class_dist = test(model, [(X, Y)])
+            loss, accuracy, class_accuracies, dist, class_dist = test(model, [
+                                                                      (X, Y)])
 
-    print(f"The overall acc is {accuracy}, the class acc is {class_accuracies}")
+    print(
+        f"The overall acc is {accuracy}, the class acc is {class_accuracies}")
     return loss, accuracy, class_accuracies, dist, class_dist
+
 
 def validate_tensors(tensor_list):
     for idx, item in enumerate(tensor_list):
 
-        assert isinstance(item, torch.Tensor), f"Item at index {idx} is not a tensor: {type(item)}"
+        assert isinstance(
+            item, torch.Tensor), f"Item at index {idx} is not a tensor: {type(item)}"
         if not isinstance(item, torch.Tensor):
-            print(f"Non-tensor found at index {idx}: {item}, type: {type(item)}")
+            print(
+                f"Non-tensor found at index {idx}: {item}, type: {type(item)}")
+
 
 def read_data(path, max_files=None):
     data_dict = {}
     file_count = 0
-    
+
     for filename in os.listdir(path):
         if max_files is not None and file_count >= max_files:
             break
-        
+
         file_path = os.path.join(path, filename)
         data = torch.load(file_path)
 
@@ -225,22 +241,24 @@ def read_data(path, max_files=None):
     return data_dict
 
 
-def process_data(data, indices):
+def process_data(data, indices, shuffle=False):
     X = []
     Y = []
     for index in indices:
         X += data[index]
         Y += ([indices.index(index)] * len(data[index]))
 
-    shuffle_indices = list(range(len(X)))
-    random.shuffle(shuffle_indices)
-    X = [X[i] for i in shuffle_indices]
-    Y = [Y[i] for i in shuffle_indices]
+    if shuffle:
+        shuffle_indices = list(range(len(X)))
+        random.shuffle(shuffle_indices)
+        X = [X[i] for i in shuffle_indices]
+        Y = [Y[i] for i in shuffle_indices]
     validate_tensors(X)
 
     X = torch.stack(X, dim=0)
     Y = torch.tensor(Y)
     return X, Y
+
 
 def main(data_path, output_folder):
     print(f'Processing {data_path}', flush=True)
@@ -269,8 +287,10 @@ def main(data_path, output_folder):
         Xi_test = X_test[:, i, :]
         model = SingleLayerClassifier(emb_dim, num_classes)
 
-        train_results = classify(model, indices, Xi_train, Y_train, train_mode=True)
-        test_results = classify(model, indices, Xi_test, Y_test, train_mode=False)
+        train_results = classify(
+            model, indices, Xi_train, Y_train, train_mode=True)
+        test_results = classify(model, indices, Xi_test,
+                                Y_test, train_mode=False)
 
         results_single.append({
             'layer_num': i,
@@ -288,16 +308,18 @@ def main(data_path, output_folder):
 
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-    
+
     results_file_path = os.path.join(output_folder, f'probing-results.json')
     with open(results_file_path, 'w') as file:
         json.dump(results_single, file, indent=4)
     print(f'Results saved to {results_file_path}')
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process and classify data.')
     parser.add_argument('data_path', type=str, help='Path to the data file')
-    parser.add_argument('output_folder', type=str, help='Output folder for results')
+    parser.add_argument('output_folder', type=str,
+                        help='Output folder for results')
     args = parser.parse_args()
 
     main(args.data_path, args.output_folder)
