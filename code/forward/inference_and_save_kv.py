@@ -1,4 +1,4 @@
-from model import LLaMA_Analysis
+from model import Model
 import argparse
 import json
 from tqdm import tqdm
@@ -61,7 +61,7 @@ def get_prompt(kv_paris, index):
 
     return {'prompt': prompt, 'index': index, 'value': kv_paris[1][index-1]}
 
-model = LLaMA_Analysis(args.model_name, 'cuda', args.model_path)
+model = Model(args.model_name, 'cuda')
 
 model_name = args.model_name.split('/')[-1]
 os.makedirs(os.path.join(args.save_path, model_name), exist_ok=True)
@@ -74,7 +74,7 @@ for i in tqdm(range(args.num_data), desc="Prompts", position=0):
     kv_paris = get_kv_paris(args.num_kv)
     for index in args.indices:
         prompt = get_prompt(kv_paris, index)
-        _,layers_mat = model.lm_layers(prompt['prompt'], args.layers)
+        _, layers_mat = model.lm_layers(prompt['prompt'], args.layers)
         data.append((copy.deepcopy(layers_mat), prompt['value'], index,kv_paris))
 
         del layers_mat
