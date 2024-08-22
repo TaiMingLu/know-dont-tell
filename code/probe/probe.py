@@ -124,10 +124,10 @@ def train(model, data, epochs, lr):
         total_loss = 0
         correct = 0
         total = 0
-        class_correct = dict()
-        class_total = dict()
-        class_abs_diff = dict()
-        class_counts = dict()
+        class_correct = {label: 0 for label in num_classes}
+        class_total = {label: 0 for label in num_classes}
+        class_abs_diff = {label: 0 for label in num_classes}
+        class_counts = {label: 0 for label in num_classes}
 
         for X, Y in data:
             optimizer.zero_grad()
@@ -141,15 +141,9 @@ def train(model, data, epochs, lr):
             correct += (predicted == Y).sum().item()
 
             for label, prediction in zip(Y, predicted):
-                if label.item() not in class_total:
-                    class_total[label.item()] = 0
-                    class_correct[label.item()] = 0
-                    class_abs_diff[label.item()] = 0
-                    class_counts[label.item()] = 0
                 class_total[label.item()] += 1
                 class_counts[label.item()] += 1
-                class_abs_diff[label.item()] += (prediction -
-                                                 label).abs().item()
+                class_abs_diff[label.item()] += (prediction - label).abs().item()
                 if label == prediction:
                     class_correct[label.item()] += 1
 
