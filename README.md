@@ -1,4 +1,4 @@
-﻿This is the code repository of [Insights into LLM Long-Context Failures: When Transformers Know but Don't Tell](https://arxiv.org/abs/2406.14673)
+﻿This is the code repository of [Insights into LLM Long-Context Failures: When Transformers Know but Don't Tell](https://arxiv.org/abs/2406.14673). [EMNLP 2024 Findings]
  
 Large Language Models (LLMs) exhibit positional bias, struggling to utilize information from the middle or end of long contexts. Our study explores LLMs' long-context reasoning by probing their hidden representations. We find that while LLMs encode the position of target information, they often fail to leverage this in generating accurate responses. This reveals a disconnect between information retrieval and utilization, a "_know but don't tell_" phenomenon. We further analyze the relationship between extraction time and final accuracy, offering insights into the underlying mechanics of transformer models.
 
